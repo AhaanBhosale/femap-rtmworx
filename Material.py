@@ -48,7 +48,7 @@ class Material:
 
                     
                     # Append material to output list
-                    materials.append((material_name, material))
+                    materials.append(material)
 
         return materials
     

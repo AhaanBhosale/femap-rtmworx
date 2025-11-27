@@ -1,5 +1,7 @@
 import re
 from Ply import Ply
+import math
+import Material
 
 class Property:
     # Attributes:
@@ -52,7 +54,13 @@ class Property:
                             ply.Thickness = float(parts[0])
                             ply.Angle = float(parts[3])
                             ply.Elset_Name = elset_name
-                            ply.Material = parts[2].strip()
+
+                            # Find material by name
+                            material_name = parts[2].strip()
+                            mat = [m for m in materials_list if m.Name == material_name]
+                            if not mat:
+                                raise ValueError(f"Material '{material_name}' not found for ply.")
+                            ply.Material = mat[0]
                             
                             # Add to property plies
                             prop.Plies.append(ply)
@@ -61,3 +69,72 @@ class Property:
                     properties.append(prop)
 
         return properties
+    
+    # Compute propoerty plies into a single effective property
+    def compute_effective_property(self):
+
+        # Intialize some arrays
+        ts = []
+        k11s = []
+        k22s = []
+        vfs = []
+
+        # Iterate through plies and compute effective rotated property
+        for ply in self.Plies:
+
+            # Transform the permeability values based on the ply angle
+            rad = math.radians(ply.Angle)
+            mat = ply.Material
+            k11 = mat.K11
+            k22 = mat.K22
+            k11_transformed = (k11 * (math.cos(rad))**2 + k22 * (math.sin(rad))**2)
+            k22_transformed = (k11 * (math.sin(rad))**2 + k22 * (math.cos(rad))**2)
+
+            # Append material propeorties to global arrays
+            ts.append(ply.Thickness)
+            vfs.append(mat.Vf)
+            k11s.append(k11_transformed)
+            k22s.append(k22_transformed)
+
+        # Compute total thickness
+        total_thickness = sum(ts)
+
+        # Compute weighted average properties
+        if total_thickness > 0:
+            weighted_k11 = sum(k * t for k, t in zip(k11s, ts)) / total_thickness
+            weighted_k22 = sum(k * t for k, t in zip(k22s, ts)) / total_thickness
+            weighted_vf = sum(v * t for v, t in zip(vfs, ts)) / total_thickness
+        else:
+            weighted_k11 = 0.0
+            weighted_k22 = 0.0
+            weighted_vf = 0.0
+
+        # Create new material
+        effective_material = Material.Material()
+        effective_material.K11 = weighted_k11
+        effective_material.K22 = weighted_k22
+        effective_material.Vf = weighted_vf
+
+        # Create new ply to hold effective property
+        effective_ply = Ply()
+        effective_ply.Thickness = total_thickness
+        effective_ply.Material = effective_material
+
+        # Create new property to hold effective ply
+        effective_property = Property()
+        effective_property.Elset = self.Elset
+        effective_property.Plies = [effective_ply]
+
+        return effective_property
+    
+
+# Debugging
+from Node import Node
+from Element import Element
+file_dir = "C:\\Users\\AhaanBhosalePontisEn\\Documents\\Pontis\\Pontis INTERNAL - Documents\\Engineering Tools en Technology\\Flow Simulation - RTMWorx\\Scripting\\FEMAP to RTMWorx\\FEMAP Files\\Surface with Property.inp"
+nodes_list = Node.read_nodes(file_dir)
+elements_list = Element.read_elements(file_dir, nodes_list)
+materials_list = Material.Material.read_materials(file_dir)
+properties = Property.read_properties(file_dir, materials_list, elements_list)
+for prop in properties:
+    effective_prop = prop.compute_effective_property()
