@@ -1,23 +1,39 @@
-from .Node import Node
-
 class Element:
 
     # Attributes:
-    def __init__(self, nodes=None):
-        self._nodes = None  # List of Node objects
-        self.Nodes = nodes if nodes is not None else []
+    def __init__(self, nodes=None, id=0, elset_name =""):
 
-        @property
-        def nodes(self):
-            return self._nodes
-        
-        @nodes.setter
-        def nodes(self, value):
-            if isinstance(value, Node):
-                self._nodes = [value]
-            elif isinstance(value, list):
-                if not all(isinstance(item, Node) for item in value):
-                    raise TypeError("All items must be Node objects")
-                self._nodes = value
-            else:
-                raise TypeError("Must be Node or list of Nodes")
+        self.Nodes = nodes if nodes is not None else []
+        self.Id = id
+        self.Elset_Name = elset_name
+
+    # Read elements from abaqus input file and return a list of Element objects
+    @staticmethod
+    def read_elements(file_path, nodes_dict):
+        # Initialize output
+        elements = []
+
+        # Open the file and read lines
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+            # Process each line
+            lines_iter = iter(lines)
+            for line in lines_iter:
+
+                # Check for element definition line
+                if line.strip().upper().startswith('*ELEMENT,'):
+                    
+                    # Read element definitions until the next asterisk line
+                    # The element definition line is already skipped
+                    for line in lines_iter:
+                        if line.startswith('*'):
+                            break
+                        parts = line.strip().split(',')
+                        if len(parts) >= 2:
+                            element_id = int(parts[0])
+                            node_ids = [int(nid) for nid in parts[1:]]
+                            element_nodes = [nodes_dict[nid] for nid in node_ids if nid in nodes_dict]
+                            element = Element(element_nodes, element_id)
+                            elements.append((element_id, element))
+        return elements
