@@ -20,8 +20,12 @@ class Material:
             lines = file.readlines()
 
             # Process each line
-            lines_iter = iter(lines)
-            for line in lines_iter:
+            lines_list = list(lines)
+            xi = 0
+            while xi < len(lines_list):
+
+                # Get current line
+                line = lines_list[xi]
                 
                 #Check for material definition line
                 if line.strip().upper().startswith('*MATERIAL,'):
@@ -30,14 +34,26 @@ class Material:
                     material_name = line.split('=')[1].strip()
 
                     # Ensure it is of the correct type
-                    line = next(lines_iter)
+                    # Advance to next line since material type is defined there
+                    xi += 1
+                    line = lines_list[xi]
                     if not 'LAMINA' in line.strip().upper():
+                        xi += 1
                         continue  # Skip non-orthotropic materials
                     
                     # Read material properties until the next asterisk line
-                    for line in lines_iter:
+                    for xj in range(xi + 1, len(lines_list)):
+
+                        # Get current line within material definitions
+                        line = lines_list[xj]
+
+                        # If there is a new asterisk line, break
+                        # Also realign xi to continue from here
                         if line.startswith('*'):
+                            xi = xj - 1
                             break
+
+                        # Split line and create Material object
                         parts = line.strip().split(',')
                         if len(parts) >= 2:
                             material = Material()
@@ -46,13 +62,10 @@ class Material:
                             material.K22 = float(parts[1])
                             material.Vf = float(parts[3])
 
-                    
                     # Append material to output list
                     materials.append(material)
 
-        return materials
-    
+                # Increment counter
+                xi += 1
 
-# Debugging
-file_dir = "C:\\Users\\AhaanBhosalePontisEn\\Documents\\Pontis\\Pontis INTERNAL - Documents\\Engineering Tools en Technology\\Flow Simulation - RTMWorx\\Scripting\\FEMAP to RTMWorx\\FEMAP Files\\Surface with Property.inp"
-Material.read_materials(file_dir)
+        return materials

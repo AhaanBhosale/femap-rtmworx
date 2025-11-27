@@ -1,3 +1,5 @@
+import re
+
 class Element:
 
     # Attributes:
@@ -22,22 +24,38 @@ class Element:
             lines = file.readlines()
 
             # Process each line
-            lines_iter = iter(lines)
-            for line in lines_iter:
+            lines_list = list(lines)
+            xi = 0
+            while xi < len(lines_list):
+
+                # Current line
+                line = lines_list[xi]
 
                 # Check for element definition line
                 if line.strip().upper().startswith('*ELEMENT,'):
                     
                     # Extract ELSET name from the element definition line
-                    import re
                     elset_match = re.search(r'ELSET\s*=\s*([^,\s]+)', line, re.IGNORECASE)
-                    elset_name = elset_match.group(1) if elset_match else ""
+                    if elset_match:
+                        elset_name = elset_match.group(1)
+                    else:
+                        raise ValueError(f"ELSET not found in ELEMENT line: {line.strip()}")
+                        
                     
                     # Read element definitions until the next asterisk line
                     # The element definition line is already skipped
-                    for line in lines_iter:
+                    for xj in range(xi + 1, len(lines_list)):
+
+                        # Current line within element definitions
+                        line = lines_list[xj]
+
+                        # If there is a new asterisk line, break
+                        # Also realign xi to continue from here
                         if line.startswith('*'):
+                            xi = xj - 1
                             break
+
+                        # Split line and create Element object
                         parts = line.strip().split(',')
                         if len(parts) >= 2:
                             element_id = int(parts[0])
@@ -45,4 +63,8 @@ class Element:
                             element_nodes = [nodes_list[nid] for nid in node_ids if nid in nodes_list]
                             element = Element(element_nodes, element_id, elset_name)
                             elements.append(element)
+                
+                # Increment counter
+                xi += 1
+                
         return elements

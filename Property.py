@@ -127,14 +127,99 @@ class Property:
 
         return effective_property
     
+    # Write property information to SALT file
+    def write_salt_property(self, file):
 
-# Debugging
-from Node import Node
-from Element import Element
-file_dir = "C:\\Users\\AhaanBhosalePontisEn\\Documents\\Pontis\\Pontis INTERNAL - Documents\\Engineering Tools en Technology\\Flow Simulation - RTMWorx\\Scripting\\FEMAP to RTMWorx\\FEMAP Files\\Surface with Property.inp"
-nodes_list = Node.read_nodes(file_dir)
-elements_list = Element.read_elements(file_dir, nodes_list)
-materials_list = Material.Material.read_materials(file_dir)
-properties = Property.read_properties(file_dir, materials_list, elements_list)
-for prop in properties:
-    effective_prop = prop.compute_effective_property()
+        # Compute effective property
+        effective_property = self.compute_effective_property()
+        elems = effective_property.Elset
+
+        # Create a surface in RTM Worx for each element in the elset
+        for elem in elems:
+
+            # Get the four corner coordinates of the element
+            # Convert to m for SALT
+            x1 = elem.Nodes[0].X / 1000.0
+            y1 = elem.Nodes[0].Y / 1000.0
+            z1 = elem.Nodes[0].Z / 1000.0
+            x2 = elem.Nodes[1].X / 1000.0
+            y2 = elem.Nodes[1].Y / 1000.0
+            z2 = elem.Nodes[1].Z / 1000.0
+            x3 = elem.Nodes[2].X / 1000.0
+            y3 = elem.Nodes[2].Y / 1000.0
+            z3 = elem.Nodes[2].Z / 1000.0
+
+            # For four noded elements
+            if len(elem.Nodes) == 4:
+                x4 = elem.Nodes[3].X / 1000.0
+                y4 = elem.Nodes[3].Y / 1000.0
+                z4 = elem.Nodes[3].Z / 1000.0
+
+                # Create the key points
+                points_content = f"""
+                var point1 = solver::KptAdd({x1}, {y1}, {z1});
+                var point2 = solver::KptAdd({x2}, {y2}, {z2});
+                var point3 = solver::KptAdd({x3}, {y3}, {z3});
+                var point4 = solver::KptAdd({x4}, {y4}, {z4});
+                """
+
+                # Create the curves
+                curves_content = f"""
+                var curve1 = solver::CrvAdd(point1, point2);
+                var curve2 = solver::CrvAdd(point2, point3);
+                var curve3 = solver::CrvAdd(point3, point4);
+                var curve4 = solver::CrvAdd(point4, point1);
+                """
+
+                # Create the surface
+                surface_content = f"""
+                var surface = solver::SrfAdd(curve1, curve2, curve3, curve4);
+                """
+            else:
+
+                # For three noded elements, create a triangular surface
+                points_content = f"""
+                var point1 = solver::KptAdd({x1}, {y1}, {z1});
+                var point2 = solver::KptAdd({x2}, {y2}, {z2});
+                var point3 = solver::KptAdd({x3}, {y3}, {z3});
+                """
+
+                # Create the curves
+                curves_content = f"""
+                var curve1 = solver::CrvAdd(point1, point2);
+                var curve2 = solver::CrvAdd(point2, point3);
+                var curve3 = solver::CrvAdd(point3, point1);
+                """
+
+                # Create the surface
+                surface_content = f"""
+                var surface = solver::SrfAdd(curve1, curve2, curve3);
+                """
+                
+            # Set the surface properties
+            properties_content = f"""
+            solver::SrfSetProps(surface, {{
+                propId = "RTM Thin Shell";
+                H = {effective_property.Plies[0].Thickness / 1000.0};
+                Vf = {effective_property.Plies[0].Material.Vf};
+                phi = 0.0;
+                k11 = {effective_property.Plies[0].Material.K11};
+                k22 = {effective_property.Plies[0].Material.K22};
+                r1x = 1; r1y = 0; r1z = 0;
+            }});
+            """
+
+            # Write all contents to the file
+            file.write("\n")
+            file.write("{")
+            file.write("\n")
+            file.write(points_content)
+            file.write(curves_content)
+            file.write(surface_content)
+            file.write(properties_content)
+            file.write("\n")
+            file.write("}")
+            file.write("\n")
+
+            
+            
