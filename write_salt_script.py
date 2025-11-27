@@ -71,7 +71,7 @@ def finalize_solver(file):
     return
 
 # Create the SALT script
-def create_salt_script(file_path, properties_list):
+def create_salt_script(file_path, properties_list, runners_list):
 
     # Write to file
     with open(file_path, 'w') as file:
@@ -88,6 +88,10 @@ def create_salt_script(file_path, properties_list):
         # Write each property to the SALT script
         for prop in properties_list:
             prop.write_salt_property(file)
+
+        # Write each runner to the SALT script
+        for runner in runners_list:
+            runner.write_salt(file)
 
         # Mesh the geometry
         mesh_geometry(file)

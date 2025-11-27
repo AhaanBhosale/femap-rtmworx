@@ -2,6 +2,7 @@
 import Material
 import Element
 import Property
+import Runner
 from write_salt_script import create_salt_script
 import Node
 from tkinter import Tk
@@ -52,6 +53,7 @@ nodes_list = Node.Node.read_nodes(file_path)
 elements_list = Element.Element.read_elements(file_path, nodes_list)
 materials_list = Material.Material.read_materials(file_path)
 properties_list = Property.Property.read_properties(file_path, materials_list, elements_list)
+runners_list = Runner.Runner.read_runner(file_path, elements_list)
 
 # Write to SALT file
-create_salt_script(output_file, properties_list)
+create_salt_script(output_file, properties_list, runners_list)
