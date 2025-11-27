@@ -1,0 +1,30 @@
+# Abaqus input files
+*.inp
+
+# Abaqus data/output files
+*.dat
+
+# Excel files
+*.xls
+*.xlsx
+*.xlsm
+
+# Common temporary files
+*.tmp
+*.bak
+*.log
+~$*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# Virtual environments
+.venv/
+venv/
+env/
