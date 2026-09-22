@@ -1,5 +1,3 @@
-# Python libraries
-import itertools
 
 # Import relevant SALT libraries
 def create_library_import(file):
